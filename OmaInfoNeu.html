@@ -1,0 +1,275 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Tagesübersicht</title>
+
+<style>
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .container {
+    width: 85%;
+    height: 85%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  h1 {
+    text-align: center;
+    font-weight: normal;
+    font-size: 12vh;
+    margin: 20px 0;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    flex: 1;
+  }
+
+  td {
+    border: 1px solid;
+    padding: 20px;
+    width: 50%;
+  }
+
+  tr {
+    height: 16.6%;
+  }
+
+  /* Zustände */
+  .past {
+    color: #aaa;
+  }
+
+  .current {
+    font-weight: bold;
+  }
+
+  /* Nacht */
+  .night {
+    background: black;
+    color: #888;
+  }
+
+  .night td {
+    border: 1px solid #888;
+  }
+
+  .message {
+    text-align: center;
+    font-size: 9vh;
+    margin: 60px 0;
+    padding: 40px 20px;
+    color: #ddd;
+  }
+</style>
+</head>
+
+<body>
+
+<div id="app" class="container"></div>
+
+<script src="data.js"></script>
+
+<script>
+const labelsDay = [
+  "Morgens:",
+  "Frühstück:",
+  "Mittagessen:",
+  "Nachmittags:",
+  "Abendessen:",
+  "Abends:"
+];
+
+const labelsNight = [
+  "Morgen früh:",
+  "dann:"
+];
+
+const wochentage = [
+  "Sonntag",
+  "Montag",
+  "Dienstag",
+  "Mittwoch",
+  "Donnerstag",
+  "Freitag",
+  "Samstag"
+];
+
+const now = new Date();
+const hour = now.getHours();
+const today = now.getDay();
+const nextDay = (today + 1) % 7;
+
+const typToday = (today >= 1 && today <= 5) ? "Werktags" : "Wochenende";
+
+const app = document.getElementById("app");
+
+
+// ========================
+// TAGMODUS
+// ========================
+if (hour >= 6 && hour < 22) {
+
+  app.innerHTML = `
+    <h1 id="title"></h1>
+    <table id="table">
+      <tbody id="tableBody"></tbody>
+    </table>
+  `;
+
+  document.body.style.background = "white";
+  document.body.style.color = "black";
+
+  const title = document.getElementById("title");
+  const tableBody = document.getElementById("tableBody");
+  const table = document.getElementById("table");
+
+  title.innerHTML = "Heute: <b>" + wochentage[today] + "</b> (" + typToday + ")";
+
+  // ✅ ZEITLOGIK NEU
+  let currentIndex = -1;
+
+  if (hour >= 6 && hour < 8) currentIndex = 0;
+  else if (hour >= 8 && hour < 10) currentIndex = 1;
+  else if (hour >= 10 && hour < 12) currentIndex = 2;
+  else if (hour >= 12 && hour < 18) currentIndex = 3;
+  else if (hour >= 18 && hour < 20) currentIndex = 4;
+  else if (hour >= 20 && hour < 22) currentIndex = 5;
+
+  // ✅ Tabelle füllen
+  for (let i = 0; i < 6; i++) {
+
+    const row = document.createElement("tr");
+
+    const cell1 = document.createElement("td");
+    const cell2 = document.createElement("td");
+
+    cell1.innerText = labelsDay[i];
+    cell2.innerText = data[today][i] || "";
+
+    // vergangen
+    if (i < currentIndex) {
+      cell1.classList.add("past");
+      cell2.classList.add("past");
+    }
+
+    // aktuell
+    if (i === currentIndex) {
+      cell1.classList.add("current");
+      cell2.classList.add("current");
+    }
+
+    row.appendChild(cell1);
+    row.appendChild(cell2);
+    tableBody.appendChild(row);
+  }
+
+  fitTable(table, app, title);
+
+
+// ========================
+// NACHTMODUS
+// ========================
+} else {
+
+  app.classList.add("night");
+
+  app.innerHTML = `
+    <h1 id="title"></h1>
+
+    <div class="message">
+      <b>Es ist noch Nachts!</b><br>Weiterschlafen!
+    </div>
+
+    <table id="table">
+      <tbody id="tableBody"></tbody>
+    </table>
+  `;
+
+  const title = document.getElementById("title");
+  const tableBody = document.getElementById("tableBody");
+  const table = document.getElementById("table");
+  const message = document.querySelector(".message");
+
+  const typNight = (today >= 1 && today <= 5) ? "Werktags" : "Wochenende";
+
+  title.innerHTML = "Heute: <b>" + wochentage[today] + "</b> (" + typNight + ")";
+
+  for (let i = 0; i < 2; i++) {
+    const row = document.createElement("tr");
+
+    const cell1 = document.createElement("td");
+    const cell2 = document.createElement("td");
+
+    cell1.innerText = labelsNight[i];
+    cell2.innerText = data[nextDay][i] || "";
+
+    row.appendChild(cell1);
+    row.appendChild(cell2);
+
+    tableBody.appendChild(row);
+  }
+
+  fitTable(table, app, title, message);
+}
+
+
+// ========================
+// AUTO-SKALIERUNG
+// ========================
+function fitTable(table, container, title, extraElement = null) {
+
+  let min = 10;
+  let max = 200;
+  let best = min;
+
+  let extraHeight = 0;
+
+  if (extraElement) {
+    const styles = window.getComputedStyle(extraElement);
+    extraHeight =
+      extraElement.offsetHeight +
+      parseInt(styles.marginTop) +
+      parseInt(styles.marginBottom);
+  }
+
+  const availableHeight =
+    container.clientHeight -
+    title.offsetHeight -
+    extraHeight - 10;
+
+  while (min <= max) {
+    let mid = Math.floor((min + max) / 2);
+    table.style.fontSize = mid + "px";
+
+    const fits =
+      table.scrollHeight <= availableHeight &&
+      table.scrollWidth <= table.clientWidth;
+
+    if (fits) {
+      best = mid;
+      min = mid + 1;
+    } else {
+      max = mid - 1;
+    }
+  }
+
+  table.style.fontSize = best + "px";
+}
+
+window.addEventListener("resize", () => location.reload());
+</script>
+
+</body>
+</html>

@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -85,7 +86,13 @@
 
 <script>
 const now = new Date();
-const hour = now.getHours(); // hier kannst du testen → z.B. 23
+
+const params = new URLSearchParams(window.location.search);
+const hourParam = params.get("hour");
+
+const hour = (hourParam !== null)
+  ? parseInt(hourParam)
+  : now.getHours();
 
 const today = now.getDay();
 const nextDay = (today + 1) % 7;

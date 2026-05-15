@@ -9,7 +9,7 @@
   body {
   margin: 0;
   font-family: Arial, sans-serif;
-  height: 100dvh; /* fix 2 */
+  height: 100dvh; 
   display: flex;
   justify-content: center;
   align-items: center;
@@ -29,8 +29,8 @@
 
  
 .container {
-  width: 85%;
-  height: 85%;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -38,32 +38,56 @@
 
 h1 {
   font-weight: normal;
-  font-size: 12vh;
-  margin: 20px 0;
+  margin: 0;
+  padding: 0;
 
-  white-space: nowrap;
-  overflow: hidden;
+  width: 100%;              /* ✅ wichtig für horizontale Zentrierung */
 
-  text-align: center;
-  display: block;
-  width: 100%;
+  display: flex;            /* ✅ aktiviert echtes Zentrieren */
+  align-items: center;      /* ✅ vertikal */
+  justify-content: center;  /* ✅ horizontal */
+
+  text-align: center;       /* ✅ wichtig für mehrzeiligen Text */
+
+  
+  white-space: pre-wrap;
 }
 
-  table {
-    border-collapse: collapse;
-    width: 100%;
-    flex: 1;
-  }
+
+
+table {
+  border-collapse: collapse;
+
+  width: 95%;
+  margin-left: auto;
+  margin-right: auto;
+
+  margin-top: auto;
+  margin-bottom: 2.5%;        /* ✅ dein Abstand */
+}
+
+
+
 
   td {
     border: 1px solid currentColor;
-    padding: 20px;
+    
     width: 50%;
-  }
+    
 
-  tr {
-    height: 16.6%;
-  }
+  padding-top: 0.2em;
+  padding-bottom: 0.2em;
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+}
+
+
+    
+tr {
+  height: 12dvh;
+}
+
+
 
   /* Zustände */
   .past {
@@ -75,13 +99,34 @@ h1 {
   }
 
   /* Nacht-Message */
-  .message {
-    text-align: center;
-    font-size: 9vh;
-    margin: 60px 0;
-    padding: 40px 20px;
-    color: #ddd;
-  }
+.message {
+  width: 80%;
+  height: 50%;        /* ✅ DAS fehlte wirklich */
+
+  margin-left: auto;
+  margin-right: auto;
+
+  display: flex;
+  flex-direction: column;
+
+  justify-content: center;
+  align-items: center;
+
+  text-align: center;
+
+  color: #ddd;
+}
+
+.message span {
+  display: block;
+}
+
+.message b {
+  display: block;
+  white-space: nowrap;   /* ✅ verhindert Umbruch */
+}
+
+
 
 </style>
 </head>
@@ -182,7 +227,9 @@ function renderDay() {
     tableBody.appendChild(row);
   }
 
+  fitTitle(title, app);
   fitTable(table, app, title);
+
 }
 
 function renderNight() {
@@ -192,9 +239,12 @@ function renderNight() {
   app.innerHTML = `
     <h1 id="title"></h1>
 
-    <div class="message">
-      <b>Es ist noch Nachts!</b><br>Weiterschlafen!
-    </div>
+
+<div class="message">
+  <b>Es ist noch Nachts!</b>
+  <span>Weiterschlafen</span>
+</div>
+
 
     <table id="table">
       <tbody id="tableBody"></tbody>
@@ -223,169 +273,58 @@ function renderNight() {
     tableBody.appendChild(row);
   }
 
+  fitTitle(title, app);
+
+const firstLine = message.querySelector("b");
+
+// ganz klein machen (nur zum Messen)
+firstLine.style.fontSize = "1px";
+
+// messen
+const baseWidth = firstLine.scrollWidth;
+
+// WICHTIG: zurücksetzen!
+firstLine.style.fontSize = "";   // ✅ DAS fehlte
+
+const targetWidth = message.clientWidth;
+
+const newFontSize = targetWidth / baseWidth;
+
+message.style.fontSize = newFontSize + "px";
+
   fitTable(table, app, title, message);
+
 }
 
 
 // ==============================
 // AUTO-SKALIERUNG
 // ==============================
-function fitTable(table, container, title, extra = null) {
 
-  const MIN_FONT = 12;   // ✅ Mindestgröße
-  const MAX_FONT = 200;
 
-  let min = 10, max = MAX_FONT, best = MIN_FONT;
-  let extraHeight = 0;
+function fitTitle(title, container) {
 
-  if (extra) {
-    const style = window.getComputedStyle(extra);
-    extraHeight =
-      extra.offsetHeight +
-      parseInt(style.marginTop) +
-      parseInt(style.marginBottom);
-  }
-
-  const available =
-    container.clientHeight -
-    title.offsetHeight -
-    extraHeight - 10;
-
-  // ✅ maximale Schriftgröße berechnen
-  while (min <= max) {
-    let mid = Math.floor((min + max) / 2);
-    table.style.fontSize = mid + "px";
-
-    if (table.scrollHeight <= available) {
-      best = mid;
-      min = mid + 1;
-    } else {
-      max = mid - 1;
-    }
-  }
-
-  // ✅ intelligentes Verhalten
-  const cells = table.querySelectorAll("td");
-
-  if (best < MIN_FONT) {
-    // Schrift nicht kleiner als Mindestgröße
-    table.style.fontSize = MIN_FONT + "px";
-
-    // ✅ Padding dynamisch verkleinern
-    cells.forEach(cell => {
-      cell.style.padding = "8px";
-    });
-
-  } else {
-    table.style.fontSize = best + "px";
-
-    // ✅ Padding dynamisch skalieren (intelligent!)
-    const scale = best / MAX_FONT;
-
-    cells.forEach(cell => {
-      const padding = Math.max(10, 20 * scale);
-      cell.style.padding = padding + "px";
-    });
-  }
-}
-
-function fitLayout(container, title, table, extra = null) {
-
-  const MIN_TITLE = 20;
-  const MAX_TITLE = 200;
-
-  const MIN_TABLE = 12;
-  const MAX_TABLE = 200;
-
-  let bestTitle = MIN_TITLE;
-  let bestTable = MIN_TABLE;
-
-  let min = 10;
-  let max = 200;
-
-  const testText = "Heute: <b>Donnerstag</b> (Werktags)";
-  const availableWidth = container.clientWidth;
   const totalHeight = container.clientHeight;
 
-  // Höhe für Zusatz (z.B. Nacht-Message)
-  let extraHeight = 0;
-  if (extra) {
-    const style = window.getComputedStyle(extra);
-    extraHeight =
-      extra.offsetHeight +
-      parseInt(style.marginTop) +
-      parseInt(style.marginBottom);
-  }
+  const titleHeight = totalHeight * 0.20;
 
-  // 🔍 Binary search über Titelgröße
-  while (min <= max) {
+  title.style.height = titleHeight + "px";
 
-    let mid = Math.floor((min + max) / 2);
-
-    // Titel testweise setzen
-    title.innerHTML = testText;
-    title.style.fontSize = mid + "px";
-
-    // passt Titel in eine Zeile?
-    if (title.scrollWidth > availableWidth) {
-      max = mid - 1;
-      continue;
-    }
-
-    // Platz für Tabelle berechnen
-    const remainingHeight =
-      totalHeight -
-      title.offsetHeight -
-      extraHeight -5; //- 10; fix 3
-
-    // Tabelle bestmöglich skalieren (vereinfachte Berechnung)
-    table.style.fontSize = MIN_TABLE + "px";
-
-    if (table.scrollHeight <= remainingHeight) {
-      bestTitle = mid;
-      min = mid + 1;
-    } else {
-      max = mid - 1;
-    }
-  }
-
-  // ✅ Titel final setzen
-  title.style.fontSize = bestTitle + "px";
-
-  // ✅ Jetzt Tabelle optimal bestimmen
-  let tMin = MIN_TABLE;
-  let tMax = MAX_TABLE;
-  let best = MIN_TABLE;
-
-  const availableHeight =
-    totalHeight -
-    title.offsetHeight -
-    extraHeight - 10;
-
-  while (tMin <= tMax) {
-    let mid = Math.floor((tMin + tMax) / 2);
-    table.style.fontSize = mid + "px";
-
-    if (table.scrollHeight <= availableHeight) {
-      best = mid;
-      tMin = mid + 1;
-    } else {
-      tMax = mid - 1;
-    }
-  }
-
-  table.style.fontSize = Math.max(MIN_TABLE, best);
-
-  // ✅ intelligentes Padding
-  const cells = table.querySelectorAll("td");
-  const scale = Math.min(1, best / MAX_TABLE);
-
-  cells.forEach(cell => {
-    const padding = Math.max(8, 20 * scale);
-    cell.style.padding = padding + "px";
-  });
+  // Schriftgröße passend zur Höhe
+  title.style.fontSize = (titleHeight * 0.45) + "px";
 }
 
+function fitTable(table, container, title, extra = null) {
+
+  const row = table.querySelector("tr");
+  if (!row) return;
+
+  const rowHeight = row.offsetHeight;
+
+  // ✅ Schrift als Anteil der Zeilenhöhe
+  table.style.fontSize = (rowHeight * 0.6) + "px";
+}
+``
 // ==============================
 // START
 // ==============================

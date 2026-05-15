@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Familienplan</title>
+
+<style>
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Tag */
+  body.day {
+    background: white;
+    color: black;
+  }
+
+  /* Nacht */
+  body.night {
+    background: black;
+    color: #888;
+  }
+
+  .container {
+    width: 85%;
+    height: 85%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  h1 {
+    text-align: center;
+    font-weight: normal;
+    font-size: 12vh;
+    margin: 20px 0;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    flex: 1;
+  }
+
+  td {
+    border: 1px solid currentColor;
+    padding: 20px;
+    width: 50%;
+  }
+
+  tr {
+    height: 16.6%;
+  }
+
+  /* Zustände */
+  .past {
+    color: #aaa;
+  }
+
+  .current {
+    font-weight: bold;
+  }
+
+  /* Nacht-Message */
+  .message {
+    text-align: center;
+    font-size: 9vh;
+    margin: 60px 0;
+    padding: 40px 20px;
+    color: #ddd;
+  }
+
+</style>
+</head>
+
+<body>
+
+<div id="app" class="container"></div>
+
+<script src="data.js"></script>
+
+<script>
+const now = new Date();
+const hour = 23 // now.getHours(); // hier kannst du testen → z.B. 23
+
+const today = now.getDay();
+const nextDay = (today + 1) % 7;
+
+const app = document.getElementById("app");
+
+const labelsDay = [
+  "Morgens:",
+  "Frühstück:",
+  "Mittagessen:",
+  "Nachmittags:",
+  "Abendessen:",
+  "Abends:"
+];
+
+const labelsNight = [
+  "Morgen früh:",
+  "dann:"
+];
+
+const wochentage = [
+  "Sonntag","Montag","Dienstag",
+  "Mittwoch","Donnerstag","Freitag","Samstag"
+];
+
+function getTyp(day) {
+  return (day >= 1 && day <= 5) ? "Werktags" : "Wochenende";
+}
+
+function renderDay() {
+
+  document.body.className = "day";
+
+  app.innerHTML = `
+    <h1 id="title"></h1>
+    <table id="table">
+      <tbody id="tableBody"></tbody>
+    </table>
+  `;
+
+  const title = document.getElementById("title");
+  const tableBody = document.getElementById("tableBody");
+  const table = document.getElementById("table");
+
+  title.innerHTML =
+    "Heute: <b>" + wochentage[today] + "</b> (" + getTyp(today) + ")";
+
+  // Zeitlogik
+  let currentIndex = -1;
+
+  if (hour >= 6 && hour < 8) currentIndex = 0;
+  else if (hour >= 8 && hour < 10) currentIndex = 1;
+  else if (hour >= 10 && hour < 12) currentIndex = 2;
+  else if (hour >= 12 && hour < 18) currentIndex = 3;
+  else if (hour >= 18 && hour < 20) currentIndex = 4;
+  else if (hour >= 20 && hour < 22) currentIndex = 5;
+
+  for (let i = 0; i < 6; i++) {
+
+    const row = document.createElement("tr");
+    const cell1 = document.createElement("td");
+    const cell2 = document.createElement("td");
+
+    cell1.innerText = labelsDay[i];
+    cell2.innerText = data[today][i] || "";
+
+    if (i < currentIndex) {
+      cell1.classList.add("past");
+      cell2.classList.add("past");
+    }
+
+    if (i === currentIndex) {
+      cell1.classList.add("current");
+      cell2.classList.add("current");
+    }
+
+    row.appendChild(cell1);
+    row.appendChild(cell2);
+    tableBody.appendChild(row);
+  }
+
+  fitTable(table, app, title);
+}
+
+function renderNight() {
+
+  document.body.className = "night";
+
+  app.innerHTML = `
+    <h1 id="title"></h1>
+
+    <div class="message">
+      <b>Es ist noch Nachts!</b><br>Weiterschlafen!
+    </div>
+
+    <table id="table">
+      <tbody id="tableBody"></tbody>
+    </table>
+  `;
+
+  const title = document.getElementById("title");
+  const tableBody = document.getElementById("tableBody");
+  const table = document.getElementById("table");
+  const message = document.querySelector(".message");
+
+  title.innerHTML =
+    "Heute: <b>" + wochentage[today] + "</b> (" + getTyp(today) + ")";
+
+  for (let i = 0; i < 2; i++) {
+
+    const row = document.createElement("tr");
+    const cell1 = document.createElement("td");
+    const cell2 = document.createElement("td");
+
+    cell1.innerText = labelsNight[i];
+    cell2.innerText = data[nextDay][i] || "";
+
+    row.appendChild(cell1);
+    row.appendChild(cell2);
+    tableBody.appendChild(row);
+  }
+
+  fitTable(table, app, title, message);
+}
+
+
+// ==============================
+// AUTO-SKALIERUNG
+// ==============================
+function fitTable(table, container, title, extra = null) {
+
+  const MIN_FONT = 12;   // ✅ Mindestgröße
+  const MAX_FONT = 200;
+
+  let min = 10, max = MAX_FONT, best = MIN_FONT;
+  let extraHeight = 0;
+
+  if (extra) {
+    const style = window.getComputedStyle(extra);
+    extraHeight =
+      extra.offsetHeight +
+      parseInt(style.marginTop) +
+      parseInt(style.marginBottom);
+  }
+
+  const available =
+    container.clientHeight -
+    title.offsetHeight -
+    extraHeight - 10;
+
+  // ✅ maximale Schriftgröße berechnen
+  while (min <= max) {
+    let mid = Math.floor((min + max) / 2);
+    table.style.fontSize = mid + "px";
+
+    if (table.scrollHeight <= available) {
+      best = mid;
+      min = mid + 1;
+    } else {
+      max = mid - 1;
+    }
+  }
+
+  // ✅ intelligentes Verhalten
+  const cells = table.querySelectorAll("td");
+
+  if (best < MIN_FONT) {
+    // Schrift nicht kleiner als Mindestgröße
+    table.style.fontSize = MIN_FONT + "px";
+
+    // ✅ Padding dynamisch verkleinern
+    cells.forEach(cell => {
+      cell.style.padding = "8px";
+    });
+
+  } else {
+    table.style.fontSize = best + "px";
+
+    // ✅ Padding dynamisch skalieren (intelligent!)
+    const scale = best / MAX_FONT;
+
+    cells.forEach(cell => {
+      const padding = Math.max(10, 20 * scale);
+      cell.style.padding = padding + "px";
+    });
+  }
+}
+
+function fitLayout(container, title, table, extra = null) {
+
+  const MIN_TITLE = 20;
+  const MAX_TITLE = 200;
+
+  const MIN_TABLE = 12;
+  const MAX_TABLE = 200;
+
+  let bestTitle = MIN_TITLE;
+  let bestTable = MIN_TABLE;
+
+  let min = 10;
+  let max = 200;
+
+  const testText = "Heute: <b>Donnerstag</b> (Werktags)";
+  const availableWidth = container.clientWidth;
+  const totalHeight = container.clientHeight;
+
+  // Höhe für Zusatz (z.B. Nacht-Message)
+  let extraHeight = 0;
+  if (extra) {
+    const style = window.getComputedStyle(extra);
+    extraHeight =
+      extra.offsetHeight +
+      parseInt(style.marginTop) +
+      parseInt(style.marginBottom);
+  }
+
+  // 🔍 Binary search über Titelgröße
+  while (min <= max) {
+
+    let mid = Math.floor((min + max) / 2);
+
+    // Titel testweise setzen
+    title.innerHTML = testText;
+    title.style.fontSize = mid + "px";
+
+    // passt Titel in eine Zeile?
+    if (title.scrollWidth > availableWidth) {
+      max = mid - 1;
+      continue;
+    }
+
+    // Platz für Tabelle berechnen
+    const remainingHeight =
+      totalHeight -
+      title.offsetHeight -
+      extraHeight - 10;
+
+    // Tabelle bestmöglich skalieren (vereinfachte Berechnung)
+    table.style.fontSize = MIN_TABLE + "px";
+
+    if (table.scrollHeight <= remainingHeight) {
+      bestTitle = mid;
+      min = mid + 1;
+    } else {
+      max = mid - 1;
+    }
+  }
+
+  // ✅ Titel final setzen
+  title.style.fontSize = bestTitle + "px";
+
+  // ✅ Jetzt Tabelle optimal bestimmen
+  let tMin = MIN_TABLE;
+  let tMax = MAX_TABLE;
+  let best = MIN_TABLE;
+
+  const availableHeight =
+    totalHeight -
+    title.offsetHeight -
+    extraHeight - 10;
+
+  while (tMin <= tMax) {
+    let mid = Math.floor((tMin + tMax) / 2);
+    table.style.fontSize = mid + "px";
+
+    if (table.scrollHeight <= availableHeight) {
+      best = mid;
+      tMin = mid + 1;
+    } else {
+      tMax = mid - 1;
+    }
+  }
+
+  table.style.fontSize = Math.max(MIN_TABLE, best);
+
+  // ✅ intelligentes Padding
+  const cells = table.querySelectorAll("td");
+  const scale = Math.min(1, best / MAX_TABLE);
+
+  cells.forEach(cell => {
+    const padding = Math.max(8, 20 * scale);
+    cell.style.padding = padding + "px";
+  });
+}
+
+// ==============================
+// START
+// ==============================
+if (hour >= 6 && hour < 22) {
+  renderDay();
+} else {
+  renderNight();
+}
+
+</script>
+
+</body>
+</html>

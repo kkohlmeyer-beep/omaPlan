@@ -3,17 +3,28 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<title>Tagesübersicht</title>
+<title>Familienplan</title>
 
 <style>
   body {
     margin: 0;
     font-family: Arial, sans-serif;
     height: 100vh;
-    overflow: hidden;
     display: flex;
     justify-content: center;
     align-items: center;
+  }
+
+  /* Tag */
+  body.day {
+    background: white;
+    color: black;
+  }
+
+  /* Nacht */
+  body.night {
+    background: black;
+    color: #888;
   }
 
   .container {
@@ -37,7 +48,7 @@
   }
 
   td {
-    border: 1px solid;
+    border: 1px solid currentColor;
     padding: 20px;
     width: 50%;
   }
@@ -55,16 +66,7 @@
     font-weight: bold;
   }
 
-  /* Nacht */
-  .night {
-    background: black;
-    color: #888;
-  }
-
-  .night td {
-    border: 1px solid #888;
-  }
-
+  /* Nacht-Message */
   .message {
     text-align: center;
     font-size: 9vh;
@@ -72,6 +74,7 @@
     padding: 40px 20px;
     color: #ddd;
   }
+
 </style>
 </head>
 
@@ -82,6 +85,14 @@
 <script src="data.js"></script>
 
 <script>
+const now = new Date();
+const hour = now.getHours(); // hier kannst du testen → z.B. 23
+
+const today = now.getDay();
+const nextDay = (today + 1) % 7;
+
+const app = document.getElementById("app");
+
 const labelsDay = [
   "Morgens:",
   "Frühstück:",
@@ -97,29 +108,17 @@ const labelsNight = [
 ];
 
 const wochentage = [
-  "Sonntag",
-  "Montag",
-  "Dienstag",
-  "Mittwoch",
-  "Donnerstag",
-  "Freitag",
-  "Samstag"
+  "Sonntag","Montag","Dienstag",
+  "Mittwoch","Donnerstag","Freitag","Samstag"
 ];
 
-const now = new Date();
-const hour = now.getHours();
-const today = now.getDay();
-const nextDay = (today + 1) % 7;
+function getTyp(day) {
+  return (day >= 1 && day <= 5) ? "Werktags" : "Wochenende";
+}
 
-const typToday = (today >= 1 && today <= 5) ? "Werktags" : "Wochenende";
+function renderDay() {
 
-const app = document.getElementById("app");
-
-
-// ========================
-// TAGMODUS
-// ========================
-if (hour >= 6 && hour < 22) {
+  document.body.className = "day";
 
   app.innerHTML = `
     <h1 id="title"></h1>
@@ -128,16 +127,14 @@ if (hour >= 6 && hour < 22) {
     </table>
   `;
 
-  document.body.style.background = "white";
-  document.body.style.color = "black";
-
   const title = document.getElementById("title");
   const tableBody = document.getElementById("tableBody");
   const table = document.getElementById("table");
 
-  title.innerHTML = "Heute: <b>" + wochentage[today] + "</b> (" + typToday + ")";
+  title.innerHTML =
+    "Heute: <b>" + wochentage[today] + "</b> (" + getTyp(today) + ")";
 
-  // ✅ ZEITLOGIK NEU
+  // Zeitlogik
   let currentIndex = -1;
 
   if (hour >= 6 && hour < 8) currentIndex = 0;
@@ -147,24 +144,20 @@ if (hour >= 6 && hour < 22) {
   else if (hour >= 18 && hour < 20) currentIndex = 4;
   else if (hour >= 20 && hour < 22) currentIndex = 5;
 
-  // ✅ Tabelle füllen
   for (let i = 0; i < 6; i++) {
 
     const row = document.createElement("tr");
-
     const cell1 = document.createElement("td");
     const cell2 = document.createElement("td");
 
     cell1.innerText = labelsDay[i];
     cell2.innerText = data[today][i] || "";
 
-    // vergangen
     if (i < currentIndex) {
       cell1.classList.add("past");
       cell2.classList.add("past");
     }
 
-    // aktuell
     if (i === currentIndex) {
       cell1.classList.add("current");
       cell2.classList.add("current");
@@ -176,14 +169,11 @@ if (hour >= 6 && hour < 22) {
   }
 
   fitTable(table, app, title);
+}
 
+function renderNight() {
 
-// ========================
-// NACHTMODUS
-// ========================
-} else {
-
-  app.classList.add("night");
+  document.body.className = "night";
 
   app.innerHTML = `
     <h1 id="title"></h1>
@@ -202,13 +192,12 @@ if (hour >= 6 && hour < 22) {
   const table = document.getElementById("table");
   const message = document.querySelector(".message");
 
-  const typNight = (today >= 1 && today <= 5) ? "Werktags" : "Wochenende";
-
-  title.innerHTML = "Heute: <b>" + wochentage[today] + "</b> (" + typNight + ")";
+  title.innerHTML =
+    "Heute: <b>" + wochentage[today] + "</b> (" + getTyp(today) + ")";
 
   for (let i = 0; i < 2; i++) {
-    const row = document.createElement("tr");
 
+    const row = document.createElement("tr");
     const cell1 = document.createElement("td");
     const cell2 = document.createElement("td");
 
@@ -217,7 +206,6 @@ if (hour >= 6 && hour < 22) {
 
     row.appendChild(cell1);
     row.appendChild(cell2);
-
     tableBody.appendChild(row);
   }
 
@@ -225,39 +213,36 @@ if (hour >= 6 && hour < 22) {
 }
 
 
-// ========================
+// ==============================
 // AUTO-SKALIERUNG
-// ========================
-function fitTable(table, container, title, extraElement = null) {
+// ==============================
+function fitTable(table, container, title, extra = null) {
 
-  let min = 10;
-  let max = 200;
-  let best = min;
+  const MIN_FONT = 12;   // ✅ Mindestgröße
+  const MAX_FONT = 200;
 
+  let min = 10, max = MAX_FONT, best = MIN_FONT;
   let extraHeight = 0;
 
-  if (extraElement) {
-    const styles = window.getComputedStyle(extraElement);
+  if (extra) {
+    const style = window.getComputedStyle(extra);
     extraHeight =
-      extraElement.offsetHeight +
-      parseInt(styles.marginTop) +
-      parseInt(styles.marginBottom);
+      extra.offsetHeight +
+      parseInt(style.marginTop) +
+      parseInt(style.marginBottom);
   }
 
-  const availableHeight =
+  const available =
     container.clientHeight -
     title.offsetHeight -
     extraHeight - 10;
 
+  // ✅ maximale Schriftgröße berechnen
   while (min <= max) {
     let mid = Math.floor((min + max) / 2);
     table.style.fontSize = mid + "px";
 
-    const fits =
-      table.scrollHeight <= availableHeight &&
-      table.scrollWidth <= table.clientWidth;
-
-    if (fits) {
+    if (table.scrollHeight <= available) {
       best = mid;
       min = mid + 1;
     } else {
@@ -265,10 +250,40 @@ function fitTable(table, container, title, extraElement = null) {
     }
   }
 
-  table.style.fontSize = best + "px";
+  // ✅ intelligentes Verhalten
+  const cells = table.querySelectorAll("td");
+
+  if (best < MIN_FONT) {
+    // Schrift nicht kleiner als Mindestgröße
+    table.style.fontSize = MIN_FONT + "px";
+
+    // ✅ Padding dynamisch verkleinern
+    cells.forEach(cell => {
+      cell.style.padding = "8px";
+    });
+
+  } else {
+    table.style.fontSize = best + "px";
+
+    // ✅ Padding dynamisch skalieren (intelligent!)
+    const scale = best / MAX_FONT;
+
+    cells.forEach(cell => {
+      const padding = Math.max(10, 20 * scale);
+      cell.style.padding = padding + "px";
+    });
+  }
 }
 
-window.addEventListener("resize", () => location.reload());
+// ==============================
+// START
+// ==============================
+if (hour >= 6 && hour < 22) {
+  renderDay();
+} else {
+  renderNight();
+}
+
 </script>
 
 </body>
